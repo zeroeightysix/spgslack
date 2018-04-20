@@ -5,7 +5,7 @@ plugins {
 apply plugin: 'java'
 
 group = 'me.zeroeightsix' // TODO
-version '1.0'
+version '1.1'
 description = 'Plugin for adding slack/discord-like chat commands to your modded minecraft server'
 
 dependencies {

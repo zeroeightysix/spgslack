@@ -1,10 +1,9 @@
 package me.zeroeightsix.spgslack;
 
-import me.zeroeightsix.spgslack.commands.ShrugCommand;
+import me.zeroeightsix.spgslack.commands.EmoticonCommand;
 import org.slf4j.Logger;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandSource;
-import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.source.ConsoleSource;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.entity.living.player.Player;
@@ -12,6 +11,8 @@ import org.spongepowered.api.event.CauseStackManager;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.cause.EventContextKeys;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
+import org.spongepowered.api.event.game.state.GameStoppedServerEvent;
+import org.spongepowered.api.event.message.MessageChannelEvent;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.text.Text;
 
@@ -21,20 +22,11 @@ import javax.inject.Inject;
  * Created by 086 on 21/02/2018.
  */
 
-@Plugin(name = "SpongeSlack", id = "spg-slack", version = "1.0", description = "Plugin for adding slack/discord-like chat commands to your modded minecraft server")
+@Plugin(name = "SpongeSlack", id = "spg-slack", version = "1.1", description = "Plugin for adding slack/discord-like chat commands to your modded minecraft server")
 public class SpongeSlack {
 
-    private CommandSpec shrugSpec = CommandSpec.builder() // Our beloved /shrug command
-            .description(Text.of("Sends a shrug emoticon"))
-            .executor(new ShrugCommand())
-            .arguments(
-                    GenericArguments.optional(
-                        GenericArguments.remainingRawJoinedStrings(Text.of("message"))
-                    )
-            )
-            .build();
-
     private Logger logger;
+    private PingHandler pingHandler;
 
     @Inject
     public SpongeSlack(Logger logger) {
@@ -43,10 +35,21 @@ public class SpongeSlack {
 
     @Listener
     public void onServerStart(GameStartedServerEvent event){
-        logger.info("SpongeSlack initialising..");
-        Sponge.getCommandManager().register(this, shrugSpec, "shrug"); // Register our beloved /shrug command so we can actually use our beloved /shrug command
-        // We'll hopefully have more here later
+        logger.info("Initialising SpongeSlack");
+
+        Sponge.getCommandManager().register(this, CommandSpec.builder()
+                .description(Text.of("Toggle whether or not you will hear a sound when someone tags you in-game"))
+                .executor((pingHandler = new PingHandler(logger, this)))
+                .build(), "togglepings", "pingme");
+        Sponge.getEventManager().registerListener(this, MessageChannelEvent.Chat.class, pingHandler);
+        (new EmoticonCommand(Emotes.SHRUG)).createAndRegister(this, "shrug");
+        (new EmoticonCommand(Emotes.DISAPPROVE)).createAndRegister(this, "disapprove");
         logger.info("SpongeSlack initialised");
+    }
+
+    @Listener
+    public void onServerStop(GameStoppedServerEvent event) {
+        pingHandler.save();
     }
 
     /**
